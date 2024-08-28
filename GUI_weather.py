@@ -6,6 +6,7 @@ import numpy as np
 import sqlite3
 import pandas as pd
 
+
 # Initialize Tkinter and Matplotlib Figure
 root = tk.Tk()
 fig, ax = plt.subplots()
@@ -50,6 +51,8 @@ def filter_data(show_save):
         ax.set_title('Location Average Temperature Per Hour')
         ax.legend()
         ax.grid()
+        if show_save == 'save':
+            fig.savefig('./average_temperature.png')
     # elif filter_option == 'Temperature per 5 minutes':
     #     # t = np.arange(0, 2*np.pi, .01)
     #     # ax.plot(t, np.cos(t))
@@ -67,20 +70,29 @@ def filter_data(show_save):
         ax.set_title('Location Average Humidity Per Hour')
         ax.legend()
         ax.grid(True)
+        if show_save == 'save':
+            fig.savefig('./average_temperature.png')
     elif filter_option == 'Largest temperature difference':
         # results = []
         df = {}          
         for loc in selected_locations:
             sql_query = pd.read_sql_query(f"SELECT MAX(temperature)-MIN(temperature) as diff FROM Weathers WHERE location = '{loc}'",conn)
             df[loc] = pd.DataFrame(sql_query)
-        print(df)
+        # print(df)
         for location, diff in df.items():
             result_text.insert(tk.END, f'{location}: {diff}\n')
-    if show_save == 'show':
+    if filter_option != '' and show_save == 'show':
         canvas.draw()
+    elif filter_option != '' and show_save =='save':
+        # if show_save == 'save':
+        #     df = pd.DataFrame(df.items(), columns=['Location', 'Diff'])
+        #     print(df)
+        #     df.to_csv('./temp_diff.csv')
+        result_text.delete('1.0', tk.END)
+        result_text.insert(tk.END, 'Image is downloaded.')
     else:
         result_text.delete('1.0', tk.END)
-        result_text.insert(tk.END, 'Image/CSV is downloaded')
+        result_text.insert(tk.END, 'Data should not be empty.')
     conn.close()
 
 locations = ['Mongolia','Antarctica','Mexicali', 'Taiwan','Hong Kong']
