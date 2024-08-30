@@ -6,7 +6,6 @@ import numpy as np
 import sqlite3
 import pandas as pd
 
-
 # Initialize Tkinter and Matplotlib Figure
 root = tk.Tk()
 fig, ax = plt.subplots()
@@ -21,7 +20,7 @@ frame.pack()
 locations_checkboxes = []
 filter_var = tk.StringVar()
 # filter_options = ['Average temperature per hour', 'Temperature per 5 minutes', 'Different weather count', 'Average humidity per hour', 'Largest temperature difference']
-filter_options = ['Average temperature per hour', 'Average humidity per hour', 'Largest temperature difference']
+filter_options = ['Average temperature per hour', 'Different weather count', 'Average humidity per hour', 'Largest temperature difference']
 filter_combobox = ttk.Combobox(frame, textvariable=filter_var, values=filter_options)
 filter_combobox.pack(pady=10)
 
@@ -36,6 +35,7 @@ def filter_data(show_save):
     selected_locations = [loc for loc, cb_var in locations_checkboxes if cb_var.get()]
     filter_option = filter_var.get()
     result_text.delete('1.0', tk.END)
+    global ax
     ax.clear()  # Clear previous plot
     if filter_option == 'Average temperature per hour':
         df = {}
@@ -57,6 +57,42 @@ def filter_data(show_save):
     #     # t = np.arange(0, 2*np.pi, .01)
     #     # ax.plot(t, np.cos(t))
     #     pass
+    elif filter_option == 'Different weather count':
+        df = {}
+        for loc in selected_locations:
+            cursor.execute(f"SELECT weather, count(*) AS count FROM Weathers WHERE location = '{loc}' GROUP BY weather")
+            df[loc] = cursor.fetchall()
+        # print(df)
+        placeholders = ', '.join('?' for _ in selected_locations)
+        condition = f"WHERE location IN ({placeholders})" if selected_locations else ""
+        query = f'SELECT DISTINCT weather FROM Weathers {condition}'
+        cursor.execute(query, selected_locations)
+        weather_conditions = cursor.fetchall()
+        weather_conditions = [condition[0] for condition in weather_conditions]
+        # print(weather_conditions)
+        locations = list(df.keys())
+        bar_width = 0.15  
+        x = np.arange(len(weather_conditions))
+
+        values = np.zeros((len(locations), len(weather_conditions)))
+
+        for i, location in enumerate(locations):
+            for condition, count in df[location]:
+                if condition in weather_conditions:
+                    values[i, weather_conditions.index(condition)] = count
+
+        for i, location in enumerate(locations):
+            ax.bar(x + i * bar_width, values[i], width=bar_width, label=location)
+
+        ax.set_xlabel('Weather Conditions')
+        ax.set_ylabel('Counts')
+        ax.set_title('Weather Conditions Counts by Location')
+        ax.set_xticks(x + bar_width / 2, weather_conditions)
+        ax.tick_params(axis='x', labelrotation=15)
+        ax.legend()
+        if show_save == 'save':
+            fig.savefig('./weather_count.png')
+
     elif filter_option == 'Average humidity per hour':
         df = {}
         for loc in selected_locations:
@@ -84,10 +120,10 @@ def filter_data(show_save):
     if filter_option != '' and show_save == 'show':
         canvas.draw()
     elif filter_option != '' and show_save =='save':
-        # if show_save == 'save':
-        #     df = pd.DataFrame(df.items(), columns=['Location', 'Diff'])
-        #     print(df)
-        #     df.to_csv('./temp_diff.csv')
+        if show_save == 'save':
+            df = pd.DataFrame(df.items(), columns=['Location', 'Diff'])
+            print(df)
+            df.to_csv('./temp_diff.csv')
         result_text.delete('1.0', tk.END)
         result_text.insert(tk.END, 'Image is downloaded.')
     else:
